@@ -1,32 +1,41 @@
 import pdb
 
+from diffuser.environments.power import PowerEnv
 import diffuser.sampling as sampling
 import diffuser.utils as utils
 
 
-#-----------------------------------------------------------------------------#
-#----------------------------------- setup -----------------------------------#
-#-----------------------------------------------------------------------------#
+# -----------------------------------------------------------------------------#
+# ----------------------------------- setup -----------------------------------#
+# -----------------------------------------------------------------------------#
+
 
 class Parser(utils.Parser):
-    dataset: str = 'walker2d-medium-replay-v2'
-    config: str = 'config.locomotion'
-
-args = Parser().parse_args('plan')
+    dataset: str = "walker2d-medium-replay-v2"
+    config: str = "config.locomotion"
 
 
-#-----------------------------------------------------------------------------#
-#---------------------------------- loading ----------------------------------#
-#-----------------------------------------------------------------------------#
+args = Parser().parse_args("plan")
+
+
+# -----------------------------------------------------------------------------#
+# ---------------------------------- loading ----------------------------------#
+# -----------------------------------------------------------------------------#
 
 ## load diffusion model and value function from disk
 diffusion_experiment = utils.load_diffusion(
-    args.loadbase, args.dataset, args.diffusion_loadpath,
-    epoch=args.diffusion_epoch, seed=args.seed,
+    args.loadbase,
+    args.dataset,
+    args.diffusion_loadpath,
+    epoch=args.diffusion_epoch,
+    seed=args.seed,
 )
 value_experiment = utils.load_diffusion(
-    args.loadbase, args.dataset, args.value_loadpath,
-    epoch=args.value_epoch, seed=args.seed,
+    args.loadbase,
+    args.dataset,
+    args.value_loadpath,
+    epoch=args.value_epoch,
+    seed=args.seed,
 )
 
 ## ensure that the diffusion model and value function are compatible with each other
@@ -69,11 +78,12 @@ logger = logger_config()
 policy = policy_config()
 
 
-#-----------------------------------------------------------------------------#
-#--------------------------------- main loop ---------------------------------#
-#-----------------------------------------------------------------------------#
+# -----------------------------------------------------------------------------#
+# --------------------------------- main loop ---------------------------------#
+# -----------------------------------------------------------------------------#
 
-env = dataset.env
+# env = dataset.env
+env = PowerEnv()
 observation = env.reset()
 
 ## observations for rendering
@@ -82,14 +92,17 @@ rollout = [observation.copy()]
 total_reward = 0
 for t in range(args.max_episode_length):
 
-    if t % 10 == 0: print(args.savepath, flush=True)
+    if t % 10 == 0:
+        print(args.savepath, flush=True)
 
     ## save state for rendering only
     state = env.state_vector().copy()
 
     ## format current observation for conditioning
     conditions = {0: observation}
-    action, samples = policy(conditions, batch_size=args.batch_size, verbose=args.verbose)
+    action, samples = policy(
+        conditions, batch_size=args.batch_size, verbose=args.verbose
+    )
 
     ## execute action in environment
     next_observation, reward, terminal, _ = env.step(action)
@@ -98,8 +111,8 @@ for t in range(args.max_episode_length):
     total_reward += reward
     score = env.get_normalized_score(total_reward)
     print(
-        f't: {t} | r: {reward:.2f} |  R: {total_reward:.2f} | score: {score:.4f} | '
-        f'values: {samples.values} | scale: {args.scale}',
+        f"t: {t} | r: {reward:.2f} |  R: {total_reward:.2f} | score: {score:.4f} | "
+        f"values: {samples.values} | scale: {args.scale}",
         flush=True,
     )
 

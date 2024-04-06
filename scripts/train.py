@@ -88,37 +88,36 @@ trainer_config = utils.Config(
     n_reference=args.n_reference,
 )
 
+if __name__ == '__main__':
 #-----------------------------------------------------------------------------#
 #-------------------------------- instantiate --------------------------------#
 #-----------------------------------------------------------------------------#
 
-model = model_config()
-
-diffusion = diffusion_config(model)
-
-trainer = trainer_config(diffusion, dataset, renderer)
+    model = model_config()
+    diffusion = diffusion_config(model)
+    trainer = trainer_config(diffusion, dataset, renderer)
 
 
 #-----------------------------------------------------------------------------#
 #------------------------ test forward & backward pass -----------------------#
 #-----------------------------------------------------------------------------#
 
-utils.report_parameters(model)
+    utils.report_parameters(model)
 
-print('Testing forward...', end=' ', flush=True)
-batch = utils.batchify(dataset[0])
-loss, _ = diffusion.loss(*batch)
-loss.backward()
-print('✓')
+    print('Testing forward...', end=' ', flush=True)
+    batch = utils.batchify(dataset[0])
+    loss, _ = diffusion.loss(*batch)
+    loss.backward()
+    print('✓')
 
 
 #-----------------------------------------------------------------------------#
 #--------------------------------- main loop ---------------------------------#
 #-----------------------------------------------------------------------------#
 
-n_epochs = int(args.n_train_steps // args.n_steps_per_epoch)
+    n_epochs = int(args.n_train_steps // args.n_steps_per_epoch)
 
-for i in range(n_epochs):
-    print(f'Epoch {i} / {n_epochs} | {args.savepath}')
-    trainer.train(n_train_steps=args.n_steps_per_epoch)
+    for i in range(n_epochs):
+        print(f'Epoch {i} / {n_epochs} | {args.savepath}')
+        trainer.train(n_train_steps=args.n_steps_per_epoch)
 

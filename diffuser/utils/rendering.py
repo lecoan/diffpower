@@ -1,80 +1,96 @@
-import os
+# import os
 import numpy as np
-import einops
+
+# import einops
 import imageio
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-import gym
-import mujoco_py as mjc
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+# from matplotlib.colors import ListedColormap
+# import gym
+# import mujoco_py as mjc
 import warnings
 import pdb
 
 from .arrays import to_np
 from .video import save_video, save_videos
 
-from diffuser.datasets.d4rl import load_environment
+# from diffuser.datasets.d4rl import load_environment
 
-#-----------------------------------------------------------------------------#
-#------------------------------- helper structs ------------------------------#
-#-----------------------------------------------------------------------------#
+# -----------------------------------------------------------------------------#
+# ------------------------------- helper structs ------------------------------#
+# -----------------------------------------------------------------------------#
+
 
 def env_map(env_name):
-    '''
-        map D4RL dataset names to custom fully-observed
-        variants for rendering
-    '''
-    if 'halfcheetah' in env_name:
-        return 'HalfCheetahFullObs-v2'
-    elif 'hopper' in env_name:
-        return 'HopperFullObs-v2'
-    elif 'walker2d' in env_name:
-        return 'Walker2dFullObs-v2'
+    """
+    map D4RL dataset names to custom fully-observed
+    variants for rendering
+    """
+    if "halfcheetah" in env_name:
+        return "HalfCheetahFullObs-v2"
+    elif "hopper" in env_name:
+        return "HopperFullObs-v2"
+    elif "walker2d" in env_name:
+        return "Walker2dFullObs-v2"
     else:
         return env_name
 
-#-----------------------------------------------------------------------------#
-#------------------------------ helper functions -----------------------------#
-#-----------------------------------------------------------------------------#
+
+# -----------------------------------------------------------------------------#
+# ------------------------------ helper functions -----------------------------#
+# -----------------------------------------------------------------------------#
+
 
 def get_image_mask(img):
     background = (img == 255).all(axis=-1, keepdims=True)
     mask = ~background.repeat(3, axis=-1)
     return mask
 
+
 def atmost_2d(x):
     while x.ndim > 2:
         x = x.squeeze(0)
     return x
 
-#-----------------------------------------------------------------------------#
-#---------------------------------- renderers --------------------------------#
-#-----------------------------------------------------------------------------#
+
+# -----------------------------------------------------------------------------#
+# ---------------------------------- renderers --------------------------------#
+# -----------------------------------------------------------------------------#
+
 
 class MuJoCoRenderer:
-    '''
-        default mujoco renderer
-    '''
+    """
+    default mujoco renderer
+    """
 
     def __init__(self, env):
+        assert env == "power"
         if type(env) is str:
-            env = env_map(env)
-            self.env = gym.make(env)
+            # env = env_map(env)
+            # self.env = gym.make(env)
+            self.env = None
         else:
             self.env = env
         ## - 1 because the envs in renderer are fully-observed
         self.observation_dim = np.prod(self.env.observation_space.shape) - 1
         self.action_dim = np.prod(self.env.action_space.shape)
         try:
-            self.viewer = mjc.MjRenderContextOffscreen(self.env.sim)
+            # self.viewer = mjc.MjRenderContextOffscreen(self.env.sim)
+            self.viewer = None
         except:
-            print('[ utils/rendering ] Warning: could not initialize offscreen renderer')
+            print(
+                "[ utils/rendering ] Warning: could not initialize offscreen renderer"
+            )
             self.viewer = None
 
     def pad_observation(self, observation):
-        state = np.concatenate([
-            np.zeros(1),
-            observation,
-        ])
+        state = np.concatenate(
+            [
+                np.zeros(1),
+                observation,
+            ]
+        )
         return state
 
     def pad_observations(self, observations):
@@ -83,13 +99,24 @@ class MuJoCoRenderer:
         xvel_dim = qpos_dim - 1
         xvel = observations[:, xvel_dim]
         xpos = np.cumsum(xvel) * self.env.dt
-        states = np.concatenate([
-            xpos[:,None],
-            observations,
-        ], axis=-1)
+        states = np.concatenate(
+            [
+                xpos[:, None],
+                observations,
+            ],
+            axis=-1,
+        )
         return states
 
-    def render(self, observation, dim=256, partial=False, qvel=True, render_kwargs=None, conditions=None):
+    def render(
+        self,
+        observation,
+        dim=256,
+        partial=False,
+        qvel=True,
+        render_kwargs=None,
+        conditions=None,
+    ):
 
         if type(dim) == int:
             dim = (dim, dim)
@@ -100,14 +127,14 @@ class MuJoCoRenderer:
         if render_kwargs is None:
             xpos = observation[0] if not partial else 0
             render_kwargs = {
-                'trackbodyid': 2,
-                'distance': 3,
-                'lookat': [xpos, -0.5, 1],
-                'elevation': -20
+                "trackbodyid": 2,
+                "distance": 3,
+                "lookat": [xpos, -0.5, 1],
+                "elevation": -20,
             }
 
         for key, val in render_kwargs.items():
-            if key == 'lookat':
+            if key == "lookat":
                 self.viewer.cam.lookat[:] = val[:]
             else:
                 setattr(self.viewer.cam, key, val)
@@ -154,27 +181,35 @@ class MuJoCoRenderer:
     def composite(self, savepath, paths, dim=(1024, 256), **kwargs):
 
         render_kwargs = {
-            'trackbodyid': 2,
-            'distance': 10,
-            'lookat': [5, 2, 0.5],
-            'elevation': 0
+            "trackbodyid": 2,
+            "distance": 10,
+            "lookat": [5, 2, 0.5],
+            "elevation": 0,
         }
         images = []
         for path in paths:
             ## [ H x obs_dim ]
             path = atmost_2d(path)
-            img = self.renders(to_np(path), dim=dim, partial=True, qvel=True, render_kwargs=render_kwargs, **kwargs)
+            img = self.renders(
+                to_np(path),
+                dim=dim,
+                partial=True,
+                qvel=True,
+                render_kwargs=render_kwargs,
+                **kwargs,
+            )
             images.append(img)
         images = np.concatenate(images, axis=0)
 
         if savepath is not None:
             imageio.imsave(savepath, images)
-            print(f'Saved {len(paths)} samples to: {savepath}')
+            print(f"Saved {len(paths)} samples to: {savepath}")
 
         return images
 
     def render_rollout(self, savepath, states, **video_kwargs):
-        if type(states) is list: states = np.array(states)
+        if type(states) is list:
+            states = np.array(states)
         images = self._renders(states, partial=True)
         save_video(savepath, images, **video_kwargs)
 
@@ -185,31 +220,29 @@ class MuJoCoRenderer:
         ## there will be one more state in `observations_real`
         ## than in `observations_pred` because the last action
         ## does not have an associated next_state in the sampled trajectory
-        observations_real = observations_real[:,:-1]
+        observations_real = observations_real[:, :-1]
 
-        images_pred = np.stack([
-            self._renders(obs_pred, partial=True)
-            for obs_pred in observations_pred
-        ])
+        images_pred = np.stack(
+            [self._renders(obs_pred, partial=True) for obs_pred in observations_pred]
+        )
 
-        images_real = np.stack([
-            self._renders(obs_real, partial=False)
-            for obs_real in observations_real
-        ])
+        images_real = np.stack(
+            [self._renders(obs_real, partial=False) for obs_real in observations_real]
+        )
 
         ## [ batch_size x horizon x H x W x C ]
         images = np.concatenate([images_pred, images_real], axis=-2)
         save_videos(savepath, *images)
 
     def render_diffusion(self, savepath, diffusion_path, **video_kwargs):
-        '''
-            diffusion_path : [ n_diffusion_steps x batch_size x 1 x horizon x joined_dim ]
-        '''
+        """
+        diffusion_path : [ n_diffusion_steps x batch_size x 1 x horizon x joined_dim ]
+        """
         render_kwargs = {
-            'trackbodyid': 2,
-            'distance': 10,
-            'lookat': [10, 2, 0.5],
-            'elevation': 0,
+            "trackbodyid": 2,
+            "distance": 10,
+            "lookat": [10, 2, 0.5],
+            "elevation": 0,
         }
 
         diffusion_path = to_np(diffusion_path)
@@ -218,14 +251,23 @@ class MuJoCoRenderer:
 
         frames = []
         for t in reversed(range(n_diffusion_steps)):
-            print(f'[ utils/renderer ] Diffusion: {t} / {n_diffusion_steps}')
+            print(f"[ utils/renderer ] Diffusion: {t} / {n_diffusion_steps}")
 
             ## [ batch_size x horizon x observation_dim ]
-            states_l = diffusion_path[t].reshape(batch_size, horizon, joined_dim)[:, :, :self.observation_dim]
+            states_l = diffusion_path[t].reshape(batch_size, horizon, joined_dim)[
+                :, :, : self.observation_dim
+            ]
 
             frame = []
             for states in states_l:
-                img = self.composite(None, states, dim=(1024, 256), partial=True, qvel=True, render_kwargs=render_kwargs)
+                img = self.composite(
+                    None,
+                    states,
+                    dim=(1024, 256),
+                    partial=True,
+                    qvel=True,
+                    render_kwargs=render_kwargs,
+                )
                 frame.append(img)
             frame = np.concatenate(frame, axis=0)
 
@@ -236,27 +278,79 @@ class MuJoCoRenderer:
     def __call__(self, *args, **kwargs):
         return self.renders(*args, **kwargs)
 
-#-----------------------------------------------------------------------------#
-#---------------------------------- rollouts ---------------------------------#
-#-----------------------------------------------------------------------------#
+
+class MatplotRenderer:
+    def __init__(self, *args, **kwargs) -> None:
+        self.labels = [
+            "freq1",
+            "freq2",
+            "dfreq1",
+            "dfreq2",
+            "pm1",
+            "pm2",
+            "pe1",
+            "pe2",
+            "pgov1",
+            "pgov2",
+            "ptie",
+        ]
+
+    def _render(self, path):
+        fig = plt.figure()
+        for i, state_line in enumerate(path[:2]):  # only plot freq
+            plt.plot(range(len(state_line)), state_line, label=self.labels[i])
+        plt.ylim(-0.5, 0.3)
+        plt.legend()
+        canvas = FigureCanvasAgg(fig)
+        canvas.draw()
+        data = np.array(canvas.renderer.buffer_rgba())
+        plt.close()
+        return data
+
+    def composite(self, savepath, paths, dim=(1024, 256), **kwargs):
+        images = []
+        for path in paths:
+            images.append(self._render(path.T))
+        images = np.concatenate(images, axis=0)
+        if savepath is not None:
+            imageio.imsave(savepath, images)
+            print(f"Saved {len(paths)} samples to: {savepath}")
+        return images
+
+    def render_plan(self, savepath, actions, observations_pred, state, fps=30):
+        pass
+
+    def render_rollout(self, savepath, states, **video_kwargs):
+        if type(states) is list:
+            states = np.array(states)
+        image = self._renders(states, partial=True)
+        imageio.imsave(savepath, image)
+
+
+# -----------------------------------------------------------------------------#
+# ---------------------------------- rollouts ---------------------------------#
+# -----------------------------------------------------------------------------#
+
 
 def set_state(env, state):
     qpos_dim = env.sim.data.qpos.size
     qvel_dim = env.sim.data.qvel.size
     if not state.size == qpos_dim + qvel_dim:
         warnings.warn(
-            f'[ utils/rendering ] Expected state of size {qpos_dim + qvel_dim}, '
-            f'but got state of size {state.size}')
-        state = state[:qpos_dim + qvel_dim]
+            f"[ utils/rendering ] Expected state of size {qpos_dim + qvel_dim}, "
+            f"but got state of size {state.size}"
+        )
+        state = state[: qpos_dim + qvel_dim]
 
     env.set_state(state[:qpos_dim], state[qpos_dim:])
 
+
 def rollouts_from_state(env, state, actions_l):
-    rollouts = np.stack([
-        rollout_from_state(env, state, actions)
-        for actions in actions_l
-    ])
+    rollouts = np.stack(
+        [rollout_from_state(env, state, actions) for actions in actions_l]
+    )
     return rollouts
+
 
 def rollout_from_state(env, state, actions):
     qpos_dim = env.sim.data.qpos.size
@@ -267,7 +361,7 @@ def rollout_from_state(env, state, actions):
         observations.append(obs)
         if term:
             break
-    for i in range(len(observations), len(actions)+1):
+    for i in range(len(observations), len(actions) + 1):
         ## if terminated early, pad with zeros
-        observations.append( np.zeros(obs.size) )
+        observations.append(np.zeros(obs.size))
     return np.stack(observations)
