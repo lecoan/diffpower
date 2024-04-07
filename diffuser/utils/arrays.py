@@ -3,10 +3,6 @@ import numpy as np
 import torch
 import pdb
 
-DTYPE = torch.float
-# DEVICE = 'cuda:0'
-DEVICE = "cpu"
-
 # -----------------------------------------------------------------------------#
 # ------------------------------ numpy <--> torch -----------------------------#
 # -----------------------------------------------------------------------------#
@@ -18,9 +14,7 @@ def to_np(x):
     return x
 
 
-def to_torch(x, dtype=None, device=None):
-    dtype = dtype or DTYPE
-    device = device or DEVICE
+def to_torch(x, dtype=torch.float, device='cpu'):
     if type(x) is dict:
         return {k: to_torch(v, dtype, device) for k, v in x.items()}
     elif torch.is_tensor(x):
@@ -28,7 +22,7 @@ def to_torch(x, dtype=None, device=None):
     return torch.tensor(x, dtype=dtype, device=device)
 
 
-def to_device(x, device=DEVICE):
+def to_device(x, device):
     if torch.is_tensor(x):
         return x.to(device)
     elif type(x) is dict:
@@ -37,13 +31,13 @@ def to_device(x, device=DEVICE):
         raise RuntimeError(f"Unrecognized type in `to_device`: {type(x)}")
 
 
-def batchify(batch):
+def batchify(batch, device):
     """
     convert a single dataset item to a batch suitable for passing to a model by
             1) converting np arrays to torch tensors and
             2) and ensuring that everything has a batch dimension
     """
-    fn = lambda x: to_torch(x[None])
+    fn = lambda x: to_torch(x[None], device=device)
 
     batched_vals = []
     for field in batch._fields:
@@ -74,12 +68,11 @@ def to_img(x):
 
 
 def set_device(device):
-    DEVICE = device
     if "cuda" in device:
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
 
-def batch_to_device(batch, device=DEVICE):
+def batch_to_device(batch, device):
     vals = [to_device(getattr(batch, field), device) for field in batch._fields]
     return type(batch)(*vals)
 

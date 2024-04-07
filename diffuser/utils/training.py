@@ -58,6 +58,7 @@ class Trainer(object):
         results_folder="./results",
         n_reference=8,
         bucket=None,
+        device='cpu'
     ):
         super().__init__()
         self.model = diffusion_model
@@ -96,6 +97,7 @@ class Trainer(object):
         self.logdir = results_folder
         self.bucket = bucket
         self.n_reference = n_reference
+        self.device = device
 
         self.reset_parameters()
         self.step = 0
@@ -119,7 +121,7 @@ class Trainer(object):
         for step in range(n_train_steps):
             for i in range(self.gradient_accumulate_every):
                 batch = next(self.dataloader)
-                batch = batch_to_device(batch)
+                batch = batch_to_device(batch, self.device)
 
                 loss, infos = self.model.loss(*batch)
                 loss = loss / self.gradient_accumulate_every
@@ -173,7 +175,7 @@ class Trainer(object):
         loads model and ema from disk
         """
         loadpath = os.path.join(self.logdir, f"state_{epoch}.pt")
-        data = torch.load(loadpath, map_location=torch.device("cpu"))
+        data = torch.load(loadpath, map_location=torch.device(self.device))
 
         self.step = data["step"]
         self.model.load_state_dict(data["model"])
@@ -222,7 +224,7 @@ class Trainer(object):
 
             ## get a single datapoint
             batch = self.dataloader_vis.__next__()
-            conditions = to_device(batch.conditions, "cpu")
+            conditions = to_device(batch.conditions, self.device)
 
             ## repeat each item in conditions `n_samples` times
             conditions = apply_dict(

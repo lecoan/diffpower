@@ -3,6 +3,8 @@ import collections
 import importlib
 import pickle
 
+import torch.nn as nn
+
 
 def import_class(_class):
     if type(_class) is not str:
@@ -66,6 +68,6 @@ class Config(collections.abc.Mapping):
 
     def __call__(self, *args, **kwargs):
         instance = self._class(*args, **kwargs, **self._dict)
-        # if self._device:
-        #     instance = instance.to(self._device)
+        if self._device and isinstance(instance, nn.Module):
+            instance = instance.to(self._device)
         return instance

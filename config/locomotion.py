@@ -40,7 +40,7 @@ base = {
         "max_path_length": 1000,
         ## serialization
         "logbase": logbase,
-        "prefix": "diffusion/defaults",
+        "prefix": "diffusion/debug",
         "exp_name": watch(args_to_watch),
         ## training
         "n_steps_per_epoch": 10000,
@@ -56,7 +56,7 @@ base = {
         "save_parallel": False,
         "n_reference": 8,
         "bucket": None,
-        "device": "cpu",
+        "device": "cuda",
         "seed": None,
     },
     "values": {
@@ -69,10 +69,10 @@ base = {
         ## value-specific kwargs
         "discount": 1,  # 0.99,
         "termination_penalty": -100,
-        "normed": False,
+        "normed": True,
         ## dataset
         "loader": "datasets.ValueDataset",
-        "normalizer": "LimitsNormalizer",  # GaussianNormalizer
+        "normalizer": "GaussianNormalizer",  # GaussianNormalizer
         "preprocess_fns": [],
         "use_padding": True,
         "max_path_length": 1000,

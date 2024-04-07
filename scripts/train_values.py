@@ -1,6 +1,8 @@
 import diffuser.utils as utils
 import pdb
 
+from diffuser.utils.arrays import set_device
+
 
 #-----------------------------------------------------------------------------#
 #----------------------------------- setup -----------------------------------#
@@ -12,6 +14,7 @@ class Parser(utils.Parser):
 
 args = Parser().parse_args('values')
 
+set_device(args.device)
 
 #-----------------------------------------------------------------------------#
 #---------------------------------- dataset ----------------------------------#
@@ -93,14 +96,14 @@ model = model_config()
 
 diffusion = diffusion_config(model)
 
-trainer = trainer_config(diffusion, dataset, renderer)
+trainer = trainer_config(diffusion, dataset, renderer, device=args.device)
 
 #-----------------------------------------------------------------------------#
 #------------------------ test forward & backward pass -----------------------#
 #-----------------------------------------------------------------------------#
 
 print('Testing forward...', end=' ', flush=True)
-batch = utils.batchify(dataset[0])
+batch = utils.batchify(dataset[0], args.device)
 
 loss, _ = diffusion.loss(*batch)
 loss.backward()

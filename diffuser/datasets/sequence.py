@@ -46,6 +46,7 @@ def load_power_dataset(data_dir):
             ],
         )
 
+        # TODO we can change value function into an determinstric gradient
         def rewards_fn():
             r4freq = np.exp(-np.abs(df["freq1"] + df["freq2"]) * 1e2)
 
