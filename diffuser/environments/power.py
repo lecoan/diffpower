@@ -28,6 +28,21 @@ class PowerEnv:
         assert len(me.find_matlab()) == 1
         session_name = me.find_matlab()[0]
         self.eng = me.connect_matlab(session_name)
+
+        self.state_names = [
+            "delt_f1",
+            "delt_f2",
+            "delt_df1",
+            "delt_df2",
+            "Pm1",
+            "Pm2",
+            "Pe1",
+            "Pe2",
+            "Pg1",
+            "Pg2",
+            "Ptie",
+        ]
+
         self.reset()
 
     def set(self, k, v):
@@ -49,10 +64,14 @@ class PowerEnv:
         self.update()
         next_state = self.state_vector()
         self.set("prev_action", action)
-        return next_state, reward(state, next_state, action)
+        return (
+            next_state,
+            reward(state, next_state, action),
+            False,
+            False,
+        )  # terminal, timout
 
     def update(self):
-        self.eval('sim("assets/env.slx")')
         update_cmd = """delt_f1 = env_delt_f1;
                         delt_f2 = env_delt_f2;
                         delt_df1 = env_delt_df1;
@@ -64,27 +83,15 @@ class PowerEnv:
                         Pg1 = env_Pg1;
                         Pg2 = env_Pg2;
                         Ptie = env_Ptie;"""
+        self.eval('sim("assets/env.slx")')
         self.eval(update_cmd)
 
     def state_vector(self):
-        return np.array(
-            [
-                self.get("delt_f1"),
-                self.get("delt_f2"),
-                self.get("delt_df1"),
-                self.get("delt_df2"),
-                self.get("Pm1"),
-                self.get("Pm2"),
-                self.get("Pe1"),
-                self.get("Pe2"),
-                self.get("Pg1"),
-                self.get("Pg2"),
-                self.get("Ptie"),
-            ]
-        )
+        return np.array([self.get(k) for k in self.state_names])
 
     def set_state(self, state):
-        pass
+        for k, v in zip(self.state_names, state):
+            self.set(k, v)
 
     def reset(self):
         self.eval("clear")
@@ -95,5 +102,5 @@ class PowerEnv:
         self.eval('sim("assets/init.slx")')
         return self.state_vector()
 
-    def get_normalized_score(self):
+    def get_normalized_score(self, total_reward):
         return sum(self.state_vector()[:2])

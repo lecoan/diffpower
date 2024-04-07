@@ -323,7 +323,7 @@ class MatplotRenderer:
     def render_rollout(self, savepath, states, **video_kwargs):
         if type(states) is list:
             states = np.array(states)
-        image = self._renders(states, partial=True)
+        image = self._render(states.T)
         imageio.imsave(savepath, image)
 
 

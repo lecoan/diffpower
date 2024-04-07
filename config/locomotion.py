@@ -40,7 +40,7 @@ base = {
         "max_path_length": 1000,
         ## serialization
         "logbase": logbase,
-        "prefix": "diffusion/debug",
+        "prefix": "diffusion/defaults",
         "exp_name": watch(args_to_watch),
         ## training
         "n_steps_per_epoch": 10000,
@@ -72,7 +72,7 @@ base = {
         "normed": True,
         ## dataset
         "loader": "datasets.ValueDataset",
-        "normalizer": "GaussianNormalizer",  # GaussianNormalizer
+        "normalizer": "LimitsNormalizer",  # GaussianNormalizer
         "preprocess_fns": [],
         "use_padding": True,
         "max_path_length": 1000,
@@ -83,7 +83,7 @@ base = {
         ## training
         "n_steps_per_epoch": 10000,
         "loss_type": "value_l2",
-        "n_train_steps": 5e4,
+        "n_train_steps": 2e4,
         "batch_size": 32,
         "learning_rate": 2e-4,
         "gradient_accumulate_every": 1,
@@ -94,14 +94,14 @@ base = {
         "save_parallel": False,
         "n_reference": 8,
         "bucket": None,
-        "device": "cpu",
+        "device": "cuda",
         "seed": None,
     },
     "plan": {
         "guide": "sampling.ValueGuide",
         "policy": "sampling.GuidedPolicy",
-        "max_episode_length": 1000,
-        "batch_size": 64,
+        "max_episode_length": 200,
+        "batch_size": 16,
         "preprocess_fns": [],
         "device": "cpu",
         "seed": None,
@@ -115,7 +115,7 @@ base = {
         "logbase": logbase,
         "prefix": "plans/",
         "exp_name": watch(args_to_watch),
-        "vis_freq": 100,
+        "vis_freq": 10,
         "max_render": 8,
         ## diffusion model
         "horizon": 32,

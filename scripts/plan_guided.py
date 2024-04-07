@@ -29,6 +29,7 @@ diffusion_experiment = utils.load_diffusion(
     args.diffusion_loadpath,
     epoch=args.diffusion_epoch,
     seed=args.seed,
+    device=args.device,
 )
 value_experiment = utils.load_diffusion(
     args.loadbase,
@@ -36,6 +37,7 @@ value_experiment = utils.load_diffusion(
     args.value_loadpath,
     epoch=args.value_epoch,
     seed=args.seed,
+    device=args.device,
 )
 
 ## ensure that the diffusion model and value function are compatible with each other
@@ -100,19 +102,20 @@ for t in range(args.max_episode_length):
 
     ## format current observation for conditioning
     conditions = {0: observation}
-    action, samples = policy(
+    actions, samples = policy(
         conditions, batch_size=args.batch_size, verbose=args.verbose
     )
+    # print(actions)
 
     ## execute action in environment
-    next_observation, reward, terminal, _ = env.step(action)
+    next_observation, reward, terminal, _ = env.step(actions.tolist())
 
     ## print reward and score
     total_reward += reward
     score = env.get_normalized_score(total_reward)
     print(
         f"t: {t} | r: {reward:.2f} |  R: {total_reward:.2f} | score: {score:.4f} | "
-        f"values: {samples.values} | scale: {args.scale}",
+        f"values: {samples.values.sum()} | scale: {args.scale}",
         flush=True,
     )
 
