@@ -5,6 +5,7 @@ import torch
 import pdb
 import pandas as pd
 import os
+from functools import reduce
 
 from .normalization import DatasetNormalizer
 from .buffer import ReplayBuffer
@@ -23,48 +24,42 @@ def load_power_dataset(data_dir):
             rewards
             terminals
     """
-    data = collections.defaultdict(list)
+
+    columns = ["freq1","freq2","dfreq1","dfreq2","pm1","pm2",
+               "pe1","pe2","pgov1","pgov2","ptie","a1","a2"]
     for file in os.listdir(data_dir):
+        if not file.endswith(".csv"):
+            continue
         abs_file = os.path.join(data_dir, file)
         df = pd.read_csv(
             abs_file,
             header=None,
-            names=[
-                "freq1",
-                "freq2",
-                "dfreq1",
-                "dfreq2",
-                "pm1",
-                "pm2",
-                "pe1",
-                "pe2",
-                "pgov1",
-                "pgov2",
-                "ptie",
-                "a1",
-                "a2",
-            ],
+            names=columns,
         )
 
-        # TODO we can change value function into an determinstric gradient
+        def get_step_reward(base, states):
+            conditions = map(lambda x: x<base, states)
+            stable = reduce(lambda x, y: np.logical_and(x, y), conditions)
+            return stable.astype(np.float32)
+        
         def rewards_fn():
-            r4freq = np.exp(-np.abs(df["freq1"] + df["freq2"]) * 1e2)
-
             freq1, freq2 = df["freq1"].to_numpy(), df["freq2"].to_numpy()
-            next_freq1 = np.concatenate((freq1[1:], [freq1[-1]]))
-            next_freq2 = np.concatenate((freq2[1:], [freq2[-1]]))
-            delta_freq1 = np.abs(freq1) - np.abs(next_freq1)
-            delta_freq2 = np.abs(freq2) - np.abs(next_freq2)
-            r4dfreq = (delta_freq1 + delta_freq2) * 1e2
+            dfreq1, dfreq2 = df["dfreq1"].to_numpy(), df["dfreq2"].to_numpy()
 
-            r4power = (df["a1"] + 1e1 * df["a2"]).to_numpy() * 1e-1
+            rewards = []
+            for i in range(2, 8):
+                step_rewards = get_step_reward(1e1**(-i), np.array([freq1, freq2, dfreq1, dfreq2])) * i
+                rewards.append(step_rewards)
 
-            return r4freq + r4dfreq + r4power
-
+            return np.array(rewards).sum(axis=0)
+            # return get_step_reward(5e-5, np.array([freq1, freq2, dfreq1, dfreq2]))
+        
+        rewards = rewards_fn()
+        df = df.drop(['dfreq1', 'dfreq2', 'pe1', 'pe2'], axis=1)
         yield {
-            "observations": df.iloc[:, :11].to_numpy(),
-            "actions": df.iloc[:, 11:13].to_numpy(),
-            "rewards": rewards_fn(),
+            "observations": df.iloc[:, :len(df.columns)-2].to_numpy(),
+            "actions": df.iloc[:, -2:].to_numpy(),
+            "rewards": rewards,
             "terminals": np.array([False] * len(df)).astype(np.bool_),
         }
 
@@ -78,7 +73,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         normalizer="LimitsNormalizer",
         preprocess_fns=[],
         max_path_length=1000,
-        max_n_episodes=10000,
+        max_n_episodes=15000,
         termination_penalty=0,
         use_padding=True,
         seed=None,
@@ -91,7 +86,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.max_path_length = max_path_length
         self.use_padding = use_padding
         # itr = sequence_dataset(env, self.preprocess_fn)
-        itr = load_power_dataset("assets/data")
+        itr = load_power_dataset("assets/rand")
         fields = ReplayBuffer(max_n_episodes, max_path_length, termination_penalty)
         for i, episode in enumerate(itr):
             fields.add_path(episode)

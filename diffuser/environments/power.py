@@ -4,19 +4,20 @@ import matlab
 
 
 def reward(s, ns, a):
-    f1, f2 = s[:2]
-    nf1, nf2 = ns[:2]
+    # f1, f2 = s[:2]
+    # nf1, nf2 = ns[:2]
 
-    r4f = np.exp(-abs(f1 + f2) * 1e2)
+    # r4f = np.exp(-(abs(f1) + abs(f2)) * 1e2)
 
-    df1 = abs(f1) - abs(nf1)
-    df2 = abs(f2) - abs(nf2)
-    r4df = (df1 + df2) * 1e2
+    # df1 = abs(f1) - abs(nf1)
+    # df2 = abs(f2) - abs(nf2)
+    # r4df = (df1 + df2) * 1e2
 
-    a1, a2 = a
-    r4p = (a1 + 1e1 * a2) * 1e-1
+    # a1, a2 = a
+    # r4p = (a1 + a2) * 1e-1
 
-    return r4f + r4df + r4p
+    # return r4f + r4df + r4p
+    return 0
 
 
 class PowerEnv:
@@ -25,19 +26,19 @@ class PowerEnv:
     """
 
     def __init__(self) -> None:
-        assert len(me.find_matlab()) == 1
-        session_name = me.find_matlab()[0]
-        self.eng = me.connect_matlab(session_name)
+        if me.find_matlab():
+            session_name = me.find_matlab()[0]
+            self.eng = me.connect_matlab(session_name)
 
         self.state_names = [
             "delt_f1",
             "delt_f2",
-            "delt_df1",
-            "delt_df2",
+            # "delt_df1",
+            # "delt_df2",
             "Pm1",
             "Pm2",
-            "Pe1",
-            "Pe2",
+            # "Pe1",
+            # "Pe2",
             "Pg1",
             "Pg2",
             "Ptie",
@@ -63,7 +64,7 @@ class PowerEnv:
         self.set("action", action)
         self.update()
         next_state = self.state_vector()
-        self.set("prev_action", action)
+        # self.set("prev_action", action)
         return (
             next_state,
             reward(state, next_state, action),
@@ -91,12 +92,13 @@ class PowerEnv:
 
     def set_state(self, state):
         for k, v in zip(self.state_names, state):
-            self.set(k, v)
+            cmd = f'{k} = timeseries([0, {v}], [0, 1]);'
+            self.eval(cmd)
 
     def reset(self):
         self.eval("clear")
         self.set("stop_init", 0.1)
-        self.set("stop_env", 0.1)
+        self.set("stop_env", 1.0)
         self.set("sample", 0.1)
         self.set("prev_action", [0, 0])
         self.eval('sim("assets/init.slx")')

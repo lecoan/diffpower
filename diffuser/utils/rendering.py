@@ -284,22 +284,32 @@ class MatplotRenderer:
         self.labels = [
             "freq1",
             "freq2",
-            "dfreq1",
-            "dfreq2",
+            # "dfreq1",
+            # "dfreq2",
             "pm1",
             "pm2",
-            "pe1",
-            "pe2",
+            # "pe1",
+            # "pe2",
             "pgov1",
             "pgov2",
             "ptie",
         ]
+        self.env = None
+
+    def set_env(self, env):
+        self.env = env
 
     def _render(self, path):
-        fig = plt.figure()
-        for i, state_line in enumerate(path[:2]):  # only plot freq
-            plt.plot(range(len(state_line)), state_line, label=self.labels[i])
-        plt.ylim(-0.5, 0.3)
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.plot(range(len(path[0])), path[0], label=self.labels[0])
+        ax1.plot(range(len(path[0])), path[1], label=self.labels[1])
+        ax1.set_title("Frequency")
+
+        ax2.plot(range(len(path[0])), path[-2], label=self.labels[2])
+        ax2.plot(range(len(path[0])), path[-3], label=self.labels[3])
+        ax2.set_title("Goverment")
+
+        plt.tight_layout()
         plt.legend()
         canvas = FigureCanvasAgg(fig)
         canvas.draw()
@@ -318,7 +328,13 @@ class MatplotRenderer:
         return images
 
     def render_plan(self, savepath, actions, observations_pred, state, fps=30):
-        pass
+        assert self.env is not None
+        state_bk = self.env.state_vector().copy()
+        observations_real = rollouts_from_state(self.env, state, actions)
+        images = np.concatenate([self.composite(savepath, observations_real),
+                                 self.composite(savepath, observations_pred)], axis=1)
+        imageio.imsave(savepath, images)
+        self.env.set_state(state_bk)
 
     def render_rollout(self, savepath, states, **video_kwargs):
         if type(states) is list:
@@ -353,11 +369,10 @@ def rollouts_from_state(env, state, actions_l):
 
 
 def rollout_from_state(env, state, actions):
-    qpos_dim = env.sim.data.qpos.size
-    env.set_state(state[:qpos_dim], state[qpos_dim:])
-    observations = [env._get_obs()]
+    env.set_state(state)
+    observations = [state]
     for act in actions:
-        obs, rew, term, _ = env.step(act)
+        obs, rew, term, _ = env.step(act.tolist())
         observations.append(obs)
         if term:
             break

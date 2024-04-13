@@ -72,6 +72,7 @@ class ReplayBuffer:
         for key in self.keys:
             array = atleast_2d(path[key])
             if key not in self._dict: self._allocate(key, array)
+            # print(key, self._count, path_length)
             self._dict[key][self._count, :path_length] = array
 
         ## penalize early termination

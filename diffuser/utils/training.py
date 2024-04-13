@@ -216,7 +216,7 @@ class Trainer(object):
         savepath = os.path.join(self.logdir, f"_sample-reference.png")
         self.renderer.composite(savepath, observations)
 
-    def render_samples(self, batch_size=2, n_samples=2):
+    def render_samples(self, batch_size=2, n_samples=8):
         """
         renders samples from (ema) diffusion model
         """

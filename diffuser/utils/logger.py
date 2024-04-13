@@ -17,15 +17,15 @@ class Logger:
         ## render image of plans
         self.renderer.composite(
             os.path.join(self.savepath, f"{t}.png"),
-            samples.observations,
+            samples.observations[: self.max_render],
         )
 
-        # self.renderer.render_plan(
-        #     os.path.join(self.savepath, f"{t}_plan.png"),
-        #     samples.actions[: self.max_render],
-        #     samples.observations[: self.max_render],
-        #     state,
-        # )
+        self.renderer.render_plan(
+            os.path.join(self.savepath, f"{t}_plan.png"),
+            samples.actions[: self.max_render],
+            samples.observations[: self.max_render],
+            state,
+        )
 
         if rollout is not None:
             self.renderer.render_rollout(
