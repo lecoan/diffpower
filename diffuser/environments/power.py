@@ -45,7 +45,8 @@ class PowerEnv:
         ]
 
         self.reset()
-
+    
+    # 
     def set(self, k, v):
         if isinstance(v, (list, tuple)):
             v = matlab.double(v)
@@ -53,10 +54,12 @@ class PowerEnv:
 
     def get(self, k, series=True):
         if series:
+            # 只输出最后一位
             return self.eval(k + ".Data", nout=1)[-1][0]
         return self.eng.workspace[k]
 
     def eval(self, cmd, nout=0):
+        # 执行matlab代码，对应要输出的返回值数目
         return self.eng.eval(cmd, nargout=nout)
 
     def step(self, action):
@@ -92,13 +95,17 @@ class PowerEnv:
 
     def set_state(self, state):
         for k, v in zip(self.state_names, state):
+            # 给定状态输出给matlab，恢复到指定状态
             cmd = f'{k} = timeseries([0, {v}], [0, 1]);'
             self.eval(cmd)
 
     def reset(self):
         self.eval("clear")
+        # 先运行一下环境得到一些初始化的数据
         self.set("stop_init", 0.1)
+        # 采样时间
         self.set("stop_env", 1.0)
+        # 采样频率
         self.set("sample", 0.1)
         self.set("prev_action", [0, 0])
         self.eval('sim("assets/init.slx")')

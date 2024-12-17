@@ -1,8 +1,10 @@
-import pdb
-
+# import pdb
+# 导入一个名为 diffuser.utils的Python模块，并将其重命名为﻿utils以便在后续的代码中使用。
+import diffuser.utils as utils
 from diffuser.environments.power import PowerEnv
 import diffuser.sampling as sampling
-import diffuser.utils as utils
+
+# python scripts/plan_guided.py --dataset power --logbase logs/pretrained
 
 
 # -----------------------------------------------------------------------------#
@@ -13,7 +15,6 @@ import diffuser.utils as utils
 class Parser(utils.Parser):
     dataset: str = "walker2d-medium-replay-v2"
     config: str = "config.locomotion"
-
 
 args = Parser().parse_args("plan")
 
@@ -43,11 +44,14 @@ value_experiment = utils.load_diffusion(
 ## ensure that the diffusion model and value function are compatible with each other
 utils.check_compatibility(diffusion_experiment, value_experiment)
 
+# ema：滑动平均模型
+# 这是在读取模型
 diffusion = diffusion_experiment.ema
 dataset = diffusion_experiment.dataset
 renderer = diffusion_experiment.renderer
 
 ## initialize value guide
+# 这是在读取模型
 value_function = value_experiment.ema
 guide_config = utils.Config(args.guide, model=value_function, verbose=False)
 guide = guide_config()
@@ -69,7 +73,7 @@ policy_config = utils.Config(
     normalizer=dataset.normalizer,
     preprocess_fns=args.preprocess_fns,
     ## sampling kwargs
-    # sample_fn=sampling.n_step_guided_p_sample,
+    sample_fn=sampling.n_step_guided_p_sample,
     n_guide_steps=args.n_guide_steps,
     t_stopgrad=args.t_stopgrad,
     scale_grad_by_std=args.scale_grad_by_std,

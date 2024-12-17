@@ -19,6 +19,7 @@ class SinusoidalPosEmb(nn.Module):
         self.dim = dim
 
     def forward(self, x):
+        # x是time
         device = x.device
         half_dim = self.dim // 2
         emb = math.log(10000) / (half_dim - 1)
@@ -141,6 +142,8 @@ def cosine_beta_schedule(timesteps, s=0.008, dtype=torch.float32):
 
 def apply_conditioning(x, conditions, action_dim):
     for t, val in conditions.items():
+        # x：噪声后轨迹，讲x的初始状态赋值为实际状态，不对初始状态加噪声
+        # 对所有的batchsize都这样，t=0，action_dim=2
         x[:, t, action_dim:] = val.clone()
     return x
 

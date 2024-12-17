@@ -22,7 +22,7 @@ def n_step_guided_p_sample(
             grad = model_var * grad
 
         grad[t < t_stopgrad] = 0
-
+        # 论文里的概率分布 /mu+g（diffuser 公式(3))
         x = x + scale * grad
         x = apply_conditioning(x, cond, model.action_dim)
 

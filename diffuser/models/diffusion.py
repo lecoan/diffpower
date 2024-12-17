@@ -2,7 +2,7 @@ from collections import namedtuple
 import numpy as np
 import torch
 from torch import nn
-import pdb
+# import pdb
 
 import diffuser.utils as utils
 from .helpers import (
@@ -72,6 +72,7 @@ class GaussianDiffusion(nn.Module):
         self.clip_denoised = clip_denoised
         self.predict_epsilon = predict_epsilon
 
+        # 有些东西是pytorch不自带的，需要传递给pytorch让他用来反向计算
         self.register_buffer("betas", betas)
         self.register_buffer("alphas_cumprod", alphas_cumprod)
         self.register_buffer("alphas_cumprod_prev", alphas_cumprod_prev)
@@ -186,6 +187,7 @@ class GaussianDiffusion(nn.Module):
         return model_mean, posterior_variance, posterior_log_variance
 
     @torch.no_grad()
+    # 在去噪声
     def p_sample_loop(
         self,
         shape,
@@ -194,7 +196,7 @@ class GaussianDiffusion(nn.Module):
         return_chain=False,
         sample_fn=default_sample_fn,
         **sample_kwargs
-    ):
+        ):
         device = self.betas.device
 
         batch_size = shape[0]
@@ -223,6 +225,7 @@ class GaussianDiffusion(nn.Module):
         return Sample(x, values, chain)
 
     @torch.no_grad()
+    # 输入噪声不断去噪声生成轨迹
     def conditional_sample(self, cond, horizon=None, **sample_kwargs):
         """
         conditions : [ (time, state), ... ]
@@ -248,11 +251,13 @@ class GaussianDiffusion(nn.Module):
         return sample
 
     def p_losses(self, x_start, cond, t):
+        # batchsize*horizon*dims。randn_like：纬度一致
         noise = torch.randn_like(x_start)
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        # 原来是在trac上的每一个点都加噪声，现在把初始点恢复为不加噪声。
         x_noisy = apply_conditioning(x_noisy, cond, self.action_dim)
-
+        # 调用 TemporalUnet 的call函数也就是 forward，将数据输入给神经网络算出来一个预测噪声
         x_recon = self.model(x_noisy, cond, t)
         x_recon = apply_conditioning(x_recon, cond, self.action_dim)
 
@@ -267,6 +272,7 @@ class GaussianDiffusion(nn.Module):
 
     def loss(self, x, *args):
         batch_size = len(x)
+        # 在0-n_timesteps之间产生batch_size数量的随机整数，数据类型为long（64bit）
         t = torch.randint(0, self.n_timesteps, (batch_size,), device=x.device).long()
         return self.p_losses(x, *args, t)
 
@@ -275,13 +281,13 @@ class GaussianDiffusion(nn.Module):
 
 
 class ValueDiffusion(GaussianDiffusion):
-
+    # x_start:没有加噪声的trac
     def p_losses(self, x_start, cond, target, t):
         noise = torch.randn_like(x_start)
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
         x_noisy = apply_conditioning(x_noisy, cond, self.action_dim)
-
+        # 预测出的 reward
         pred = self.model(x_noisy, cond, t)
 
         loss, info = self.loss_fn(pred, target)

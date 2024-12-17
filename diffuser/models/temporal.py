@@ -58,30 +58,43 @@ class TemporalUnet(nn.Module):
         attention=False,
     ):
         super().__init__()
-
+        # 每一层的 channel。例如 [1, 2, 3]，你可以使用 * 操作符将其拆成 1, 2, 3。
+        # 创建一个新的列表 dims，第一个元素是 transition_dim，其余元素来自 dim_mults 中的每个元素 m 乘以 dim。
         dims = [transition_dim, *map(lambda m: dim * m, dim_mults)]
+        # 举个例子，如果 dims = [1, 2, 3, 4]，那么 dims[:-1] 就是 [1, 2, 3]，dims[1:] 就是 [2, 3, 4]，然后 zip(dims[:-1], dims[1:]) 就会生成 [(1, 2), (2, 3), (3, 4)]，转换成列表形式就是 [(1, 2), (2, 3), (3, 4)]。
         in_out = list(zip(dims[:-1], dims[1:]))
+        # Channel dimensions: [(9, 32), (32, 64), (64, 128), (128, 256)] 
         print(f'[ models/temporal ] Channel dimensions: {in_out}')
 
         time_dim = dim
+        # 这是一个 nn.Sequential 对象，它是一个包含了不同层次的神经网络模型的便捷封装。
+        # 它创建了一个包含多个层的模型
+        # 首先是一个正弦位置嵌入，然后是两个全连接层，两个线性层间还有一个Mish激活函数
         self.time_mlp = nn.Sequential(
+            # 这里把一维的数据输入都变成32了
             SinusoidalPosEmb(dim),
+            # 可以把 dim 维的向量映射到 dim * 4 维的向量。
             nn.Linear(dim, dim * 4),
             nn.Mish(),
             nn.Linear(dim * 4, dim),
         )
 
+        # 保存模型的下采样（downs）和上采样（ups）层。（Unet是对称的，表示两个过程）
         self.downs = nn.ModuleList([])
         self.ups = nn.ModuleList([])
+        # 保存了模型的解决方案级别的数量，
         num_resolutions = len(in_out)
 
-        print(in_out)
+
+        # dim_in和dim_out表示每层的输入和输出维度。然后，is_last标识是否是最后一层。
         for ind, (dim_in, dim_out) in enumerate(in_out):
             is_last = ind >= (num_resolutions - 1)
 
             self.downs.append(nn.ModuleList([
+                # 残差模块，嵌入维度 time_dim 和 持续时间 horizon
                 ResidualTemporalBlock(dim_in, dim_out, embed_dim=time_dim, horizon=horizon),
                 ResidualTemporalBlock(dim_out, dim_out, embed_dim=time_dim, horizon=horizon),
+                # 线性注意力模块
                 Residual(PreNorm(dim_out, LinearAttention(dim_out))) if attention else nn.Identity(),
                 Downsample1d(dim_out) if not is_last else nn.Identity()
             ]))
@@ -111,7 +124,8 @@ class TemporalUnet(nn.Module):
             Conv1dBlock(dim, dim, kernel_size=5),
             nn.Conv1d(dim, transition_dim, 1),
         )
-
+    # time:diffusion是随机从第几步开始扩散，比如一共20次，从第五次开始
+    # 相当于nn.module的call函数
     def forward(self, x, cond, time):
         '''
             x : [ batch x horizon x transition ]
@@ -173,7 +187,6 @@ class ValueFunction(nn.Module):
         self.blocks = nn.ModuleList([])
         num_resolutions = len(in_out)
 
-        print(in_out)
         for ind, (dim_in, dim_out) in enumerate(in_out):
             is_last = ind >= (num_resolutions - 1)
 

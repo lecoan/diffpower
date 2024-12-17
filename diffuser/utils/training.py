@@ -77,6 +77,7 @@ class Trainer(object):
         self.gradient_accumulate_every = gradient_accumulate_every
 
         self.dataset = dataset
+        # 读取到末尾重新读
         self.dataloader = cycle(
             torch.utils.data.DataLoader(
                 self.dataset,
@@ -86,6 +87,7 @@ class Trainer(object):
                 pin_memory=True,
             )
         )
+        # 绘图
         self.dataloader_vis = cycle(
             torch.utils.data.DataLoader(
                 self.dataset, batch_size=1, num_workers=0, shuffle=True, pin_memory=True
@@ -116,8 +118,9 @@ class Trainer(object):
     # -----------------------------------------------------------------------------#
 
     def train(self, n_train_steps):
-
+        # 记时间
         timer = Timer()
+        # n_train_steps：要训练几轮（模型要被更新多少次
         for step in range(n_train_steps):
             for i in range(self.gradient_accumulate_every):
                 batch = next(self.dataloader)
@@ -126,8 +129,9 @@ class Trainer(object):
                 loss, infos = self.model.loss(*batch)
                 loss = loss / self.gradient_accumulate_every
                 loss.backward()
-
+            # 根据梯度更新模型参数
             self.optimizer.step()
+            # 梯度恢复为0（迎接下一次的计算
             self.optimizer.zero_grad()
 
             if self.step % self.update_ema_every == 0:
@@ -200,6 +204,7 @@ class Trainer(object):
                 pin_memory=True,
             )
         )
+        # dataloader load出来一个batch，循环load
         batch = dataloader_tmp.__next__()
         dataloader_tmp.close()
 
@@ -208,6 +213,7 @@ class Trainer(object):
         conditions = to_np(batch.conditions[0])[:, None]
 
         ## [ batch_size x horizon x observation_dim ]
+        # 恢复归一化的数据
         normed_observations = trajectories[:, :, self.dataset.action_dim :]
         observations = self.dataset.normalizer.unnormalize(
             normed_observations, "observations"
@@ -216,6 +222,7 @@ class Trainer(object):
         savepath = os.path.join(self.logdir, f"_sample-reference.png")
         self.renderer.composite(savepath, observations)
 
+    # 用两（batch_size）组数据，每组数据跑8（n_samples）次
     def render_samples(self, batch_size=2, n_samples=8):
         """
         renders samples from (ema) diffusion model

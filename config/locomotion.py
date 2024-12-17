@@ -1,5 +1,5 @@
-import socket
-
+# import socket
+# 这个函数可能用于实验设置、数据分析、测试调节等场景, 用于生成对应设置参数清晰的标识名。
 from diffuser.utils import watch
 
 # ------------------------ base ------------------------#
@@ -40,7 +40,7 @@ base = {
         "max_path_length": 1000,
         ## serialization
         "logbase": logbase,
-        "prefix": "diffusion/hird_g",
+        "prefix": "diffusion/test",
         "exp_name": watch(args_to_watch),
         ## training
         "n_steps_per_epoch": 10000,
@@ -136,27 +136,27 @@ base = {
 # ------------------------ overrides ------------------------#
 
 
-hopper_medium_expert_v2 = {
-    "plan": {
-        "scale": 0.0001,
-        "t_stopgrad": 4,
-    },
-}
+# hopper_medium_expert_v2 = {
+#     "plan": {
+#         "scale": 0.0001,
+#         "t_stopgrad": 4,
+#     },
+# }
 
 
-halfcheetah_medium_replay_v2 = halfcheetah_medium_v2 = halfcheetah_medium_expert_v2 = {
-    "diffusion": {
-        "horizon": 4,
-        "dim_mults": (1, 4, 8),
-        "attention": True,
-    },
-    "values": {
-        "horizon": 4,
-        "dim_mults": (1, 4, 8),
-    },
-    "plan": {
-        "horizon": 4,
-        "scale": 0.001,
-        "t_stopgrad": 4,
-    },
-}
+# halfcheetah_medium_replay_v2 = halfcheetah_medium_v2 = halfcheetah_medium_expert_v2 = {
+#     "diffusion": {
+#         "horizon": 4,
+#         "dim_mults": (1, 4, 8),
+#         "attention": True,
+#     },
+#     "values": {
+#         "horizon": 4,
+#         "dim_mults": (1, 4, 8),
+#     },
+#     "plan": {
+#         "horizon": 4,
+#         "scale": 0.001,
+#         "t_stopgrad": 4,
+#     },
+# }

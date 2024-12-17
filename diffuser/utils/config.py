@@ -29,7 +29,7 @@ class Config(collections.abc.Mapping):
         self._class = import_class(_class)
         self._device = device
         self._dict = {}
-
+        # **kwargs: horizon(key)=args.horizon(val),
         for key, val in kwargs.items():
             self._dict[key] = val
 
@@ -65,7 +65,7 @@ class Config(collections.abc.Mapping):
             return self._dict[attr]
         except KeyError:
             raise AttributeError(attr)
-
+    # （1，2） *args数组：（3，4,model）**kwargs键值:（A=5，B=6,model=model）
     def __call__(self, *args, **kwargs):
         instance = self._class(*args, **kwargs, **self._dict)
         if self._device and isinstance(instance, nn.Module):

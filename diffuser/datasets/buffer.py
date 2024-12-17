@@ -8,6 +8,8 @@ def atleast_2d(x):
 class ReplayBuffer:
 
     def __init__(self, max_n_episodes, max_path_length, termination_penalty):
+        # 下划线通常表示这是一个私有变量，应该只在对象内部使用。
+        # 只产生了一个键值对，名字叫path_lengths，对应的值为一个数组，长度由变量 max_n_episodes确定，数组中的所有元素都初始化为0，
         self._dict = {
             'path_lengths': np.zeros(max_n_episodes, dtype=np.int32),
         }
@@ -66,11 +68,13 @@ class ReplayBuffer:
         assert path_length <= self.max_path_length
 
         ## if first path added, set keys based on contents
+        # add observations\actions\rewards\terminals,原本只有path_lengths
         self._add_keys(path)
 
         ## add tracked keys in path
         for key in self.keys:
             array = atleast_2d(path[key])
+            # 如果不在字典，就存
             if key not in self._dict: self._allocate(key, array)
             # print(key, self._count, path_length)
             self._dict[key][self._count, :path_length] = array

@@ -1,7 +1,7 @@
+# 导入一个名为 diffuser.utils的Python模块，并将其重命名为utils以便在后续的代码中使用。
 import diffuser.utils as utils
-import pdb
-
-from diffuser.utils.arrays import set_device
+# import pdb
+# from diffuser.utils.arrays import set_device
 
 
 # -----------------------------------------------------------------------------#
@@ -27,6 +27,8 @@ dataset_config = utils.Config(
     savepath=(args.savepath, "dataset_config.pkl"),
     env=args.dataset,
     horizon=args.horizon,
+    # 决定是否会用normalizer
+    normed=args.normed,
     normalizer=args.normalizer,
     preprocess_fns=args.preprocess_fns,
     use_padding=args.use_padding,
@@ -34,7 +36,7 @@ dataset_config = utils.Config(
     ## value-specific kwargs
     discount=args.discount,
     termination_penalty=args.termination_penalty,
-    normed=args.normed,
+
 )
 
 render_config = utils.Config(
@@ -95,9 +97,7 @@ trainer_config = utils.Config(
 # -----------------------------------------------------------------------------#
 
 model = model_config()
-
 diffusion = diffusion_config(model)
-
 trainer = trainer_config(diffusion, dataset, renderer, device=args.device)
 
 # -----------------------------------------------------------------------------#
@@ -105,6 +105,7 @@ trainer = trainer_config(diffusion, dataset, renderer, device=args.device)
 # -----------------------------------------------------------------------------#
 
 print("Testing forward...", end=" ", flush=True)
+# [] 是 __getitem__
 batch = utils.batchify(dataset[0], args.device)
 
 loss, _ = diffusion.loss(*batch)

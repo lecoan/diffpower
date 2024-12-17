@@ -1,7 +1,7 @@
-import collections
+# import collections
 import numpy as np
 import torch
-import pdb
+# import pdb
 
 # -----------------------------------------------------------------------------#
 # ------------------------------ numpy <--> torch -----------------------------#
@@ -67,9 +67,9 @@ def to_img(x):
     return (array * 255).astype(np.uint8)
 
 
-def set_device(device):
-    if "cuda" in device:
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
+# def set_device(device):
+#     if "cuda" in device:
+#         torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
 
 def batch_to_device(batch, device):
@@ -93,15 +93,19 @@ def param_to_module(param):
     module_name = param[::-1].split(".", maxsplit=1)[-1][::-1]
     return module_name
 
-
+# 报告给定模型参数的统计信息。
 def report_parameters(model, topk=10):
     counts = {k: p.numel() for k, p in model.named_parameters()}
+    #计算模型中的总参数数量。
     n_parameters = sum(counts.values())
+    # 打印总的参数数量。
     print(f"[ utils/arrays ] Total parameters: {_to_str(n_parameters)}")
-
+    # 取模型所有模块（及其子模块）的字典。
     modules = dict(model.named_modules())
+    # 将模型中的模块按参数数量降序排序。
     sorted_keys = sorted(counts, key=lambda x: -counts[x])
     max_length = max([len(k) for k in sorted_keys])
+    # 对参数数量最多的 topk 个模块进行遍历。
     for i in range(topk):
         key = sorted_keys[i]
         count = counts[key]
@@ -109,6 +113,7 @@ def report_parameters(model, topk=10):
         print(" " * 8, f"{key:10}: {_to_str(count)} | {modules[module]}")
 
     remaining_parameters = sum([counts[k] for k in sorted_keys[topk:]])
+    # 打印当前模块的名称、参数数量和模块内容。
     print(
         " " * 8,
         f"... and {len(counts)-topk} others accounting for {_to_str(remaining_parameters)} parameters",
